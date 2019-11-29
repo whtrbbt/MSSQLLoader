@@ -22,24 +22,24 @@ namespace CSVUtility
 
             //Паттерн для поиска разделителя в полях таблицы
             string pattern = ";+";
-            
-            for (int i = 0; i < dtDataTable.Columns.Count; i++)
+
+            for(int i = 0; i < dtDataTable.Columns.Count; i++)
             {
                 sw.Write(dtDataTable.Columns[i]);
-                if (i < dtDataTable.Columns.Count - 1)
+                if(i < dtDataTable.Columns.Count - 1)
                 {
                     sw.Write(";");
                 }
             }
             sw.Write(sw.NewLine);
-            foreach (DataRow dr in dtDataTable.Rows)
+            foreach(DataRow dr in dtDataTable.Rows)
             {
-                for (int i = 0; i < dtDataTable.Columns.Count; i++)
+                for(int i = 0; i < dtDataTable.Columns.Count; i++)
                 {
-                    if (!Convert.IsDBNull(dr[i]))
+                    if(!Convert.IsDBNull(dr[i]))
                     {
                         string value = dr[i].ToString();
-                        if (value.Contains(';'))
+                        if(value.Contains(';'))
                         {
                             //value = String.Format("\\{0}\\", value);
                             value = Regex.Replace(value, pattern, ":");
@@ -50,7 +50,7 @@ namespace CSVUtility
                             sw.Write(dr[i].ToString());
                         }
                     }
-                    if (i < dtDataTable.Columns.Count - 1)
+                    if(i < dtDataTable.Columns.Count - 1)
                     {
                         sw.Write(";");
                     }
@@ -77,26 +77,26 @@ namespace CSVUtility
             DataTable csvData = new DataTable();
             try
             {
-                using (TextFieldParser csvReader = new TextFieldParser(csv_file_path))
+                using(TextFieldParser csvReader = new TextFieldParser(csv_file_path))
                 {
                     csvReader.SetDelimiters(new string[] { ";" });
                     csvReader.HasFieldsEnclosedInQuotes = false;
                     string[] colFields = csvReader.ReadFields();
                     Console.WriteLine("Количество столбцов: {0}", colFields.Length);
-                    foreach (string column in colFields)
+                    foreach(string column in colFields)
                     {
                         DataColumn datecolumn = new DataColumn(column);
                         //Console.WriteLine("Поле: {0}", column);
                         datecolumn.AllowDBNull = true;
                         csvData.Columns.Add(datecolumn);
                     }
-                    while (!csvReader.EndOfData)
+                    while(!csvReader.EndOfData)
                     {
                         string[] fieldData = csvReader.ReadFields();
                         //Making empty value as null
-                        for (int i = 0; i < fieldData.Length; i++)
+                        for(int i = 0; i < fieldData.Length; i++)
                         {
-                            if (fieldData[i] == "")
+                            if(fieldData[i] == "")
                             {
                                 fieldData[i] = null;
                             }
@@ -105,7 +105,7 @@ namespace CSVUtility
                     }
                 }
             }
-            catch (Exception ex)
+            catch(Exception ex)
             {
                 Console.WriteLine("Exception: {0}", ex);
                 return null;
@@ -116,21 +116,21 @@ namespace CSVUtility
 
         public static void InsertDataIntoSQLServerUsingSQLBulkCopy(DataTable csvFileData, string tn, string cs)
         {
-            using (SqlConnection dbConnection = new SqlConnection(cs))
+            using(SqlConnection dbConnection = new SqlConnection(cs))
             {
                 dbConnection.Open();
-                using (SqlBulkCopy s = new SqlBulkCopy(dbConnection))
+                using(SqlBulkCopy s = new SqlBulkCopy(dbConnection))
                 {
                     s.DestinationTableName = tn;
                     s.EnableStreaming = true;
                     s.BatchSize = 10000;
                     s.BulkCopyTimeout = 0;
-                    s.NotifyAfter = 100;
+                    s.NotifyAfter = 1000;
                     s.SqlRowsCopied += delegate (object sender, SqlRowsCopiedEventArgs e)
                     {
                         Console.WriteLine(e.RowsCopied.ToString("#,##0") + " rows copied.");
                     };
-                    foreach (var column in csvFileData.Columns)
+                    foreach(var column in csvFileData.Columns)
                     {
                         s.ColumnMappings.Add(column.ToString(), column.ToString());
 
@@ -141,7 +141,35 @@ namespace CSVUtility
                 dbConnection.Close();
             }
         }
+        
+        public static void ClearTargetTable(string cs, string tableName)
+        {
+            
+                                   
+            string queryString = $@"TRUNCATE TABLE {tableName}";
 
+            //Console.WriteLine(queryString);
+            try
+            {
+                Console.WriteLine("Очищаем таблицу " + tableName);
+                using(SqlConnection conn = new SqlConnection(cs))
+                {
+                    SqlCommand cmd = new SqlCommand(queryString, conn);
+                    conn.Open();
+                    SqlDataAdapter da = new SqlDataAdapter(cmd);
+                    // this will query your database and return the result to your datatable
+                    DataTable result = new DataTable();
+                    da.Fill(result);
+                    Console.WriteLine("Таблица "+tableName+" очищенна");
+                    conn.Close();
+                    da.Dispose();
+                }
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine("Exception: {0}", ex);
+            }
+        }
 
     }  
  
